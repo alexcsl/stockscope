@@ -1,0 +1,60 @@
+{
+  "name": "stockscope",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "node scripts/compile-contracts.mjs && next build",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test:unit": "node --import tsx --test tests/*.test.ts",
+    "test:hosted": "node --env-file=.env.local --import tsx --test tests/hosted/*.test.ts",
+    "docs:check": "node scripts/check-doc-links.mjs",
+    "monitor:once": "node --import tsx scripts/monitor-once.ts",
+    "contracts:build": "node scripts/compile-contracts.mjs",
+    "test:contracts": "node --import tsx --test tests/contracts/*.test.mts",
+    "test:fork": "node scripts/fork-proof.mjs",
+    "deployment:prepare": "node scripts/prepare-deployment.mjs",
+    "policy-signer:create": "node scripts/create-policy-signer.mjs",
+    "test:browser": "playwright test",
+    "media:build": "node scripts/generate-film.mjs"
+  },
+  "overrides": {
+    "tmp": "^0.2.7",
+    "@grpc/grpc-js": "^1.13.6"
+  },
+  "dependencies": {
+    "@gsap/react": "^2.1.2",
+    "@openzeppelin/contracts": "^5.0.2",
+    "@supabase/ssr": "0.12.7",
+    "@supabase/supabase-js": "2.117.2",
+    "firebase": "12.19.0",
+    "gsap": "^3.15.0",
+    "jose": "6.2.2",
+    "lightweight-charts": "^5.2.0",
+    "lucide-react": "^1.48.0",
+    "next": "16.3.6",
+    "postgres": "3.4.9",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "viem": "^2.56.9"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.6",
+    "ffmpeg-static": "^5.3.0",
+    "hardhat": "^3.18.0",
+    "sharp": "^0.35.5",
+    "solc": "0.8.36",
+    "tailwindcss": "^4",
+    "tsx": "^4.23.15",
+    "typescript": "^5"
+  }
+}

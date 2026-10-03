@@ -16,6 +16,8 @@
     "contracts:build": "node scripts/compile-contracts.mjs",
     "test:contracts": "node --import tsx --test tests/contracts/*.test.mts",
     "test:fork": "node scripts/fork-proof.mjs",
+    "test:demo-fork": "node --import tsx scripts/verify-testnet-demo.ts",
+    "demo:prepare": "node scripts/prepare-testnet-demo.mjs",
     "deployment:prepare": "node scripts/prepare-deployment.mjs",
     "policy-signer:create": "node scripts/create-policy-signer.mjs",
     "test:browser": "playwright test",

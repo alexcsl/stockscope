@@ -17,7 +17,7 @@ export interface PolicyEvidence {
   simulated: boolean;
   inputUsd18: string | null;
   poolAllowed: boolean;
-  testnet?: { chainId: number; user: string; executor: string; executorCodeHash: Hex; stockToken: string; stablecoin: string; assetKey: string; sourceUrls: string[]; checks: PolicyCheck[] };
+  testnet?: { chainId: number; demo?: { controller: string }; user: string; executor: string; executorCodeHash: Hex; stockToken: string; stablecoin: string; assetKey: string; sourceUrls: string[]; checks: PolicyCheck[] };
 }
 export interface PolicyDecision { status: "eligible" | "review" | "blocked"; checks: PolicyCheck[]; evidenceHash: Hex; expiresAt: string | null; version: 1 }
 

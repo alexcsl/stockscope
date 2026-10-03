@@ -1,4 +1,5 @@
 const descriptions: Record<string, [string, string]> = {
+  demo: ["Labeled test assets", "This demo uses tokens with no monetary value and fixed synthetic feeds. It does not trade real stocks."],
   testnet: ["Testnet only", "Wallet execution is restricted to verified test networks. Mainnet research stays separate."],
   identity: ["Correct token", "The issuer listing and blockchain token must match."],
   multiplier: ["Stable share conversion", "A pending conversion change or paused price feed needs review."],

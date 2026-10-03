@@ -22,7 +22,7 @@ export const executorAbi = parseAbi([
 ]);
 
 export interface TradePreparation {
-  network?: { chainId: number; explorer: string; testnet: true; stockToken: `0x${string}`; stablecoin: `0x${string}` };
+  network?: { chainId: number; explorer: string; testnet: true; demo?: { controller: `0x${string}` }; stockToken: `0x${string}`; stablecoin: `0x${string}` };
   decision: import("./policy").PolicyDecision;
   quote: import("./uniswap-route").UniswapRoute;
   approval: { token: `0x${string}`; spender: `0x${string}`; amount: string } | null;

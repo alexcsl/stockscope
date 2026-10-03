@@ -12,6 +12,7 @@ import type { SourcedAsset } from "./robinhood-data";
 interface Binding { address: Address; codeHash: Hex; sourceUrl: string }
 export interface TestnetManifest {
   chainId: 421614 | 46630;
+  demo?: { controller: Binding };
   executor: Binding;
   stablecoin: Binding;
   sequencer: Binding;
@@ -21,6 +22,7 @@ const validBinding = (value: unknown): value is Binding => { const item = record
 export function validTestnetManifest(value: unknown): value is TestnetManifest {
   const item = record(value);
   if (!item || typeof item.chainId !== "number" || !executionChainAllowed(item.chainId) || !validBinding(item.executor) || !validBinding(item.stablecoin) || !validBinding(item.sequencer) || !Array.isArray(item.assets) || !item.assets.length) return false;
+  if (item.demo !== undefined && (item.chainId !== 421614 || !validBinding(record(item.demo)?.controller))) return false;
   return item.assets.every((raw) => {
     const asset = record(raw);
     return asset && ["AAPL", "NVDA", "TSLA"].includes(String(asset.symbol)) && /^robinhood:4663:0x[\da-f]{40}$/i.test(String(asset.assetKey)) && validBinding(asset.token) && [3, 4].includes(Number(asset.protocol)) && validBinding(asset.adapter) && validBinding(asset.venue) && validBinding(asset.quoter) && (asset.protocol !== 3 || validBinding(asset.factory)) && /^0x[\da-f]{64}$/i.test(String(asset.poolId)) && Number.isInteger(asset.fee) && Number(asset.fee) >= 0 && Number(asset.fee) < 1000000 && Number.isInteger(asset.tickSpacing) && (asset.protocol === 3 ? asset.tickSpacing === 0 : Number(asset.tickSpacing) > 0 && Number(asset.tickSpacing) <= 32767) && Array.isArray(asset.oracles) && asset.oracles.length === 2 && asset.oracles.every((rawOracle) => { const oracle = record(rawOracle); return oracle && address(oracle.token) && validBinding(oracle.feed) && Number.isInteger(oracle.maxAge) && Number(oracle.maxAge) > 0 && Number(oracle.maxAge) <= 3600; });
@@ -43,10 +45,14 @@ export async function prepareTestnetTrade(manifest: TestnetManifest, research: S
   let approval: TradePreparation["approval"] = null;
   let transaction: TradePreparation["transaction"] = null;
   let message = "Testnet integration is unavailable. Inspect the verified bindings and policy checks.";
+  if (manifest.demo) {
+    evidence.testnet!.demo = { controller: manifest.demo.controller.address };
+    evidence.testnet!.checks.push({ code: "demo", status: "pass", detail: "Demo tokens and fixed synthetic price and sequencer feeds. This does not trade real stocks or verify a live sequencer feed." });
+  }
   try {
     const chainId = await client.getChainId();
     if (!executionChainAllowed(chainId) || chainId !== manifest.chainId) throw new Error("wrong_chain");
-    for (const binding of [manifest.executor, manifest.stablecoin, manifest.sequencer, asset.token, asset.adapter, asset.venue, asset.quoter, ...(asset.factory ? [asset.factory] : []), ...asset.oracles.map((oracle) => oracle.feed)]) {
+    for (const binding of [manifest.executor, manifest.stablecoin, manifest.sequencer, asset.token, asset.adapter, asset.venue, asset.quoter, ...(manifest.demo ? [manifest.demo.controller] : []), ...(asset.factory ? [asset.factory] : []), ...asset.oracles.map((oracle) => oracle.feed)]) {
       const code = await client.getCode({ address: binding.address });
       if (!code || code === "0x" || keccak256(code) !== binding.codeHash) throw new Error("code_binding_mismatch");
     }
@@ -74,6 +80,7 @@ export async function prepareTestnetTrade(manifest: TestnetManifest, research: S
     const inputValue = await client.readContract({ address: manifest.executor.address, abi: executorAbi, functionName: "inputValue", args: [input, BigInt(inputAmount)] });
     await client.readContract({ address: manifest.executor.address, abi: executorAbi, functionName: "inputValue", args: [output, direction === "buy" ? BigInt(10) ** BigInt(18) : BigInt(10) ** BigInt(6)] });
     if (inputValue <= BigInt(0) || inputValue > BigInt(10) ** BigInt(19)) throw new Error("amount_limit");
+    if (manifest.demo && await client.readContract({ address: input, abi: erc20Abi, functionName: "balanceOf", args: [user] }) < BigInt(inputAmount)) throw new Error("demo_balance_insufficient");
     let outputAmount: bigint;
     if (asset.protocol === 3) {
       const factory = await client.readContract({ address: adapter, abi: adapterAbi, functionName: "factory" });
@@ -108,6 +115,7 @@ export async function prepareTestnetTrade(manifest: TestnetManifest, research: S
     message = "Testnet executor simulation passed. Review the token addresses and exact amount in your wallet before signing.";
   } catch (error) {
     options.onFailure?.(error);
+    if (error instanceof Error && error.message === "demo_balance_insufficient") message = "This wallet does not have enough demo tokens. The deployment owner can transfer test tokens to it. No spending approval is available.";
     if (!approval) evidence.testnet!.checks.push({ code: "deployment", status: "fail", detail: "A testnet identity, code, adapter, oracle, pool, signer, or amount binding failed verification." });
     message = approval ? "Testnet executor simulation is incomplete. Approve the exact input only, then request a fresh check. A reverted simulation is not an execution approval." : message;
   }
@@ -115,5 +123,5 @@ export async function prepareTestnetTrade(manifest: TestnetManifest, research: S
   const decision = evaluatePolicy(evidence);
   if (decision.status !== "eligible") transaction = null;
   await (options.persist || saveEvidence)(evidence, decision);
-  return { network: { chainId: manifest.chainId, explorer: testnetExplorer(manifest.chainId), testnet: true, stockToken: asset.token.address, stablecoin: manifest.stablecoin.address }, decision, quote: evidence.quote, approval, transaction, message };
+  return { network: { chainId: manifest.chainId, explorer: testnetExplorer(manifest.chainId), testnet: true, ...(manifest.demo ? { demo: { controller: manifest.demo.controller.address } } : {}), stockToken: asset.token.address, stablecoin: manifest.stablecoin.address }, decision, quote: evidence.quote, approval, transaction, message };
 }

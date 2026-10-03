@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { encodeFunctionData, erc20Abi, formatEther, formatUnits, parseUnits, type EIP1193Provider } from "viem";
 import { ActionProgress } from "./action-progress";
 import { InfoTip } from "./info-tip";
+import { DemoExecutionStatus } from "./demo-execution-status";
 import { policyLanguage } from "@/lib/policy-language";
 import type { TradePreparation } from "@/lib/execution-abi";
 import type { AnalystResult } from "@/lib/analyst";
@@ -180,6 +181,8 @@ export function TradeWorkspace({ symbol }: { symbol: string }) {
     <section className="detail-card" aria-labelledby="trade-title"><div className="card-header"><div><span className="section-kicker">TESTNET EXECUTION / MAINNET RESEARCH</span><h2 id="trade-title">Check before signing</h2></div><span className="card-tag">USER SIGNED</span></div>
       <ActionProgress step={pendingTrades.some((trade) => trade.state === "pending") ? 5 : result?.transaction ? 4 : result?.approval ? 3 : result ? 2 : account ? 1 : 0} /><p className="card-intro">Choose what to buy or sell and how much to spend. We check the token, trading pool, current price evidence, and whether the transaction would succeed before asking you to sign.</p>
       <p className="cell-meta">Your public wallet address is sent to the route provider when checking a quote. Wallet connection alone never approves spending.</p>
+      <DemoExecutionStatus account={account} provider={wallet} onRefresh={editInput} />
+      {result?.network?.demo ? <p className="workflow-message">Demo execution uses test tokens and fixed synthetic feeds. No real stocks or money are exchanged.</p> : null}
       <div className="route-controls"><label htmlFor="trade-direction">Direction</label><select id="trade-direction" value={direction} disabled={busy} onChange={(event) => { editInput(); setDirection(event.target.value as "buy" | "sell"); setAmount(event.target.value === "buy" ? "5" : "0.01"); }}><option value="buy">Buy {symbol} with USDG</option><option value="sell">Sell {symbol} for USDG</option></select><label htmlFor="trade-input">Exact input ({direction === "buy" ? "USDG" : symbol})</label><input id="trade-input" inputMode="decimal" value={amount} disabled={busy} onChange={(event) => { editInput(); setAmount(event.target.value); }} /></div>
       <div className="route-controls"><label htmlFor="execution-wallet">Wallet</label><select id="execution-wallet" value={walletId} disabled={busy || !!account} onChange={(event) => setWalletId(event.target.value)}>{wallets.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}</select></div><div className="workflow-actions"><button type="button" onClick={connect} disabled={busy}>{account ? `${account.slice(0, 8)}…${account.slice(-6)}` : "Connect wallet"}</button><button type="button" onClick={check} disabled={busy || !account}>Get estimate and review checks</button></div>
       <p className="workflow-message" role="status" aria-live="polite">{busy ? "Request in progress. Check your wallet if a signature is required." : message}</p>

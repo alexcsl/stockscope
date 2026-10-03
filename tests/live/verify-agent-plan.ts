@@ -1,8 +1,8 @@
-import { getSourcedAsset } from "../src/lib/robinhood-data";
-import { robinhoodVenue } from "../src/lib/venue-market";
-import { buildReport, proposalMatches } from "../src/lib/agent-workflows";
-import { draftTrade } from "../src/lib/agent-planner";
-import { analystConfig } from "../src/lib/analyst";
+import { getSourcedAsset } from "../../src/lib/robinhood-data";
+import { robinhoodVenue } from "../../src/lib/venue-market";
+import { buildReport, proposalMatches } from "../../src/lib/agent-workflows";
+import { draftTrade } from "../../src/lib/agent-planner";
+import { analystConfig } from "../../src/lib/analyst";
 import { writeFile, mkdir } from "node:fs/promises";
 
 const asset = await getSourcedAsset("AAPL");
@@ -15,7 +15,7 @@ if (!("proposal" in result)) { console.log(JSON.stringify(result)); process.exit
 else {
   const proposal = result.proposal;
   const evidence = { checkedAt: new Date().toISOString(), state: result.state, proposal, exactInputVerified: proposalMatches(proposal, assetKey, "AAPL", "buy", "5000000"), alteredInputRejected: !proposalMatches(proposal, assetKey, "AAPL", "buy", "6000000"), publicSettlement: "unverified", report };
-  await mkdir("artifacts", { recursive: true });
-  await writeFile("artifacts/agent-live-validation.json", JSON.stringify(evidence, null, 2));
+  await mkdir("test-results", { recursive: true });
+  await writeFile("test-results/agent-live-validation.json", JSON.stringify(evidence, null, 2));
   console.log(JSON.stringify({ state: result.state, model: proposal.model, costUsd: proposal.usage?.costUsd, exactInputVerified: evidence.exactInputVerified, alteredInputRejected: evidence.alteredInputRejected, publicSettlement: evidence.publicSettlement }));
 }

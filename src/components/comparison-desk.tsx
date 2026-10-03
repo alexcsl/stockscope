@@ -10,9 +10,9 @@ gsap.registerPlugin(useGSAP);
 
 const keyOf = (item: ComparisonSelection) => `${item.issuer}:${item.symbol}`;
 const money = (value: string | null | undefined) => value !== null && value !== undefined ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 }).format(Number(value)) : "Unavailable";
-export function ComparisonDesk() {
+export function ComparisonDesk({ initialCatalog = null, embedded = false }: { initialCatalog?: CatalogSnapshot | null; embedded?: boolean }) {
   const results = useRef<HTMLElement>(null);
-  const [catalog, setCatalog] = useState<CatalogSnapshot | null>(null);
+  const [catalog, setCatalog] = useState<CatalogSnapshot | null>(initialCatalog);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [issuer, setIssuer] = useState("all");
@@ -37,13 +37,14 @@ export function ComparisonDesk() {
         return [];
       });
       setSelected(picks.filter((item, index, all) => all.findIndex((other) => keyOf(other) === keyOf(item)) === index));
-      setSearch(query.get("q") || "");
+      setSearch(query.get(embedded ? "compareQ" : "q") || "");
     };
     restore();
     window.addEventListener("popstate", restore);
-    fetch("/api/market/catalog", { signal: abort.signal }).then(async (response) => { if (!response.ok) throw new Error(); setCatalog(await response.json()); }).catch(() => { if (!abort.signal.aborted) setError("The catalog could not load. Robinhood assets remain searchable."); });
-    return () => { abort.abort(); window.removeEventListener("popstate", restore); };
-  }, []);
+    window.addEventListener("stockscope:deskchange", restore);
+    if (!embedded) fetch("/api/market/catalog", { signal: abort.signal }).then(async (response) => { if (!response.ok) throw new Error(); setCatalog(await response.json()); }).catch(() => { if (!abort.signal.aborted) setError("The catalog could not load. Robinhood assets remain searchable."); });
+    return () => { abort.abort(); window.removeEventListener("popstate", restore); window.removeEventListener("stockscope:deskchange", restore); };
+  }, [embedded]);
   useEffect(() => {
     const abort = new AbortController();
     for (const item of selected) {
@@ -64,9 +65,10 @@ export function ComparisonDesk() {
     setSelected(next);
     const params = new URLSearchParams(window.location.search);
     if (next.length) params.set("assets", next.map(keyOf).join(",")); else params.delete("assets");
-    if (query) params.set("q", query); else params.delete("q");
+    const searchKey = embedded ? "compareQ" : "q";
+    if (query) params.set(searchKey, query); else params.delete(searchKey);
     params.delete("page");
-    window.history.replaceState(null, "", `/compare?${params}`);
+    window.history.replaceState(null, "", `${embedded ? "/terminal" : "/compare"}?${params}${embedded ? "#compare" : ""}`);
     try { localStorage.setItem("stockscope:comparison", next.map(keyOf).join(",")); } catch {}
   }
   function toggle(item: ComparisonSelection) {
@@ -75,10 +77,11 @@ export function ComparisonDesk() {
     update(found ? selected.filter((entry) => keyOf(entry) !== keyOf(item)) : [...selected, item]);
   }
   const filtered = useMemo(() => {
-    const all = [...["AAPL", "NVDA", "TSLA"].map((symbol) => ({ issuer: "robinhood" as const, symbol, name: `${symbol} Stock Token`, contract: "", chain: "Robinhood Chain" })), ...(catalog?.assets || []).map((asset) => ({ ...asset, issuer: "xstocks" as const, chain: "Arbitrum One" }))];
+    const all = [...["AAPL", "NVDA", "TSLA"].map((symbol) => ({ issuer: "robinhood" as const, symbol, name: `${symbol} Stock Token`, contract: "", chain: "Robinhood Chain" })), ...((embedded ? initialCatalog : catalog)?.assets || []).map((asset) => ({ ...asset, issuer: "xstocks" as const, chain: "Arbitrum One" }))];
     const needle = search.trim().toLowerCase();
     return all.filter((item) => (issuer === "all" || item.issuer === issuer) && `${item.symbol} ${item.name} ${item.contract}`.toLowerCase().includes(needle));
-  }, [catalog, search, issuer]);
+  }, [catalog, initialCatalog, embedded, search, issuer]);
+  const activeCatalog = embedded ? initialCatalog : catalog;
   const pages = Math.max(1, Math.ceil(filtered.length / 20));
   const currentPage = Math.min(page, pages - 1);
   const ready = selected.map((item) => records[keyOf(item)]).filter((item): item is ComparisonRecord => !!item);
@@ -86,7 +89,7 @@ export function ComparisonDesk() {
   const maxVolume = Math.max(1, ...ready.map((item) => Number(item.pair?.windows[0]?.volumeUsd || 0)));
   return <>
     <section className="compare-selection detail-card"><div className="card-header"><h2>Find a stock token</h2><span className="card-tag">{filtered.length} results</span></div><div className="catalog-toolbar"><label>Search all discovered stocks<input type="search" value={search} placeholder="Symbol, company, or contract" onChange={(event) => { setSearch(event.target.value); setPage(0); update(selected, event.target.value); }} /></label><label>Issuer and chain<select value={issuer} onChange={(event) => { setIssuer(event.target.value); setPage(0); }}><option value="all">All issuers and chains</option><option value="xstocks">xStocks / Arbitrum One</option><option value="robinhood">Robinhood / Robinhood Chain</option></select></label></div>
-      <p className="cell-meta" role="status">{error || (!catalog ? "Loading the public catalog. You can select Robinhood assets now." : catalog.complete ? `All discovered pages loaded. Updated ${new Date(catalog.retrievedAt).toLocaleTimeString()}.` : catalog.reason)}</p>
+      <p className="cell-meta" role="status">{error || (!activeCatalog ? "Loading the public catalog. You can select Robinhood assets now." : activeCatalog.complete ? `All discovered pages loaded. Updated ${new Date(activeCatalog.retrievedAt).toLocaleTimeString()}.` : activeCatalog.reason)}</p>
       <div className="catalog-grid">{filtered.slice(currentPage * 20, currentPage * 20 + 20).map((item) => { const active = selected.some((entry) => keyOf(entry) === keyOf(item)); return <button type="button" key={keyOf(item)} aria-pressed={active} disabled={!active && selected.length >= 4} className={`catalog-item${active ? " selected" : ""}`} onClick={() => toggle(item)}><span><strong>{item.symbol}</strong><small>{item.name}</small></span><span className="cell-meta">{item.issuer === "xstocks" ? "xStocks" : "Robinhood"} / {item.chain}</span><span className="catalog-state">{active ? "Selected" : "Add to compare"}</span></button>; })}</div>
       {!filtered.length ? <p className="empty-state">No matching stocks. Try another company or symbol.</p> : null}
       <nav className="compare-pages" aria-label="Catalog pages"><button disabled={!currentPage} onClick={() => setPage(currentPage - 1)}>Previous</button><span>Page {currentPage + 1} of {pages}</span>{Array.from({ length: pages }, (_, index) => index).filter((index) => index === 0 || index === pages - 1 || Math.abs(index - currentPage) < 2).map((index, position, visible) => <span key={index}>{position > 0 && index - visible[position - 1] > 1 ? <span aria-hidden="true">...</span> : null}<button aria-current={currentPage === index ? "page" : undefined} onClick={() => setPage(index)}>{index + 1}</button></span>)}<button disabled={currentPage === pages - 1} onClick={() => setPage(currentPage + 1)}>Next</button></nav>

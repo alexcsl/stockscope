@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { network } from "hardhat";
 import { BaseError, ContractFunctionRevertedError, createPublicClient, createWalletClient, custom, encodeAbiParameters, keccak256, pad, type Abi, type Address, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { compileContracts } from "../../scripts/compile-contracts.mjs";
+import { compileContracts } from "../../contracts/compile-contracts.mjs";
 import { buildReport, proposalMatches } from "../../src/lib/agent-workflows";
 import { draftTrade } from "../../src/lib/agent-planner";
 import { prepareTestnetTrade, type TestnetManifest } from "../../src/lib/testnet-execution";

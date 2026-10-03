@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { parseVenuePairs } from "../src/lib/venue-market";
 import { evaluateResearch, instrumentKey, readResearchState, type ResearchSnapshot } from "../src/lib/research-state";
-import { parseXStock } from "../src/lib/xstocks-catalog";
+import { getXStock, parseXStock } from "../src/lib/xstocks-catalog";
 
 const token = "0xaF3D76f1834A1d425780943C99Ea8A608f8a93f9";
 const quote = "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168";
@@ -23,6 +23,25 @@ test("xStocks listing only admits one exact Arbitrum deployment", () => {
   assert.equal(parseXStock(row)?.contract, token);
   assert.equal(parseXStock({ ...row, deployments: [...row.deployments, ...row.deployments] }), null);
   assert.equal(parseXStock({ ...row, trading: { currency: "EUR" } }), null);
+});
+
+test("xStocks preserves issuer identity when multiplier discovery fails", async () => {
+  const listing = { symbol: "NVDAx", name: "NVIDIA xStock", underlyingSymbol: "NVDA", trading: { currency: "USD" }, deployments: [{ network: "Arbitrum", address: token }] };
+  for (const failure of ["http", "timeout"]) {
+    const fetcher = (async (input: string | URL | Request) => {
+      if (String(input).includes("/multiplier")) {
+        if (failure === "timeout") throw new Error("provider_timeout");
+        return Response.json({}, { status: 503 });
+      }
+      return Response.json(listing);
+    }) as typeof fetch;
+    const asset = await getXStock("NVDAx", fetcher);
+    assert.equal(asset?.contract, token);
+    assert.equal(asset?.name, "NVIDIA xStock");
+    assert.equal(asset?.state, "unavailable");
+    assert.equal(asset?.reason, "multiplier_unavailable");
+    assert.equal(asset?.multiplier, null);
+  }
 });
 
 test("alerts require observed transitions and retain their evidence without duplicates", () => {

@@ -8,7 +8,7 @@ export async function GET(request: Request) {
   const denied = operatorRequest(request);
   if (denied) return denied;
   try {
-    const requests = JSON.parse(await readFile(join(process.cwd(), "artifacts", "deployment-requests.json"), "utf8"));
+    const requests = JSON.parse(await readFile(join(process.cwd(), ".stockscope", "deployment-requests.json"), "utf8"));
     if (!Array.isArray(requests) || requests.some((item) => !executionChainAllowed(Number(item.chainId)))) return Response.json({ state: "disabled", message: "Only testnet deployment requests are allowed." }, { status: 409 });
     return Response.json({ state: "available", requests }, { headers: { "Cache-Control": "no-store" } });
   } catch { return Response.json({ state: "unavailable", message: "Prepare verified unsigned deployment requests first." }, { status: 404 }); }

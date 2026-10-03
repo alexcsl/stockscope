@@ -47,6 +47,6 @@ if (!config.executor) {
     fs.writeFileSync(".stockscope/deployment-bindings.pending.json", JSON.stringify({ chainId: config.chainId, executor: config.executor, executorCodeHash: keccak256(await client.getCode({ address: config.executor })), sequencer: config.sequencer, adapters, oracles, pools: config.pools.map(({ protocol, id, fee, tickSpacing }) => ({ protocol, id, fee, tickSpacing })) }, null, 2));
   }
 }
-fs.mkdirSync("artifacts", { recursive: true });
-fs.writeFileSync("artifacts/deployment-requests.json", JSON.stringify(requests, null, 2));
-console.log(`Prepared ${requests.length} unsigned requests in artifacts/deployment-requests.json. No transaction was submitted. Verify the manifest after all requests confirm.`);
+fs.mkdirSync(".stockscope", { recursive: true });
+fs.writeFileSync(".stockscope/deployment-requests.json", JSON.stringify(requests, null, 2));
+console.log(`Prepared ${requests.length} unsigned requests in .stockscope/deployment-requests.json. No transaction was submitted. Verify the manifest after all requests confirm.`);

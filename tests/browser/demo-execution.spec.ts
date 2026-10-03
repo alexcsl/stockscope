@@ -30,7 +30,6 @@ for (const width of [1440, 390, 320]) test(`demo attribution and unfunded wallet
   await expect(page.getByRole("button", { name: "Review demo feed refresh in wallet", exact: true })).toHaveCount(0);
   expect(await page.evaluate(() => (window as Window & { walletCalls?: string[] }).walletCalls)).not.toContain("eth_sendTransaction");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
-  await page.screenshot({ path: `artifacts/demo-execution-${width}.png`, fullPage: true });
 });
 
 test("unverified demo status provides no refresh or explorer target", async ({ page }) => {

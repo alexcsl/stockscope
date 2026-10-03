@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { network } from "hardhat";
 import { createPublicClient, createWalletClient, custom, encodeAbiParameters, encodeFunctionData, hashTypedData, keccak256, pad, type Address, type Hex, type Abi } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { compileContracts } from "../../scripts/compile-contracts.mjs";
+import { compileContracts } from "../../contracts/compile-contracts.mjs";
 import { orderTypes } from "../../src/lib/execution-abi";
 
 const contracts = compileContracts(true) as Record<string, Record<string, { abi: Abi; evm: { bytecode: { object: string } } }>>;

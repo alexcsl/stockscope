@@ -1,7 +1,8 @@
 import { NavigationLink as Link } from "./navigation-link";
 import { ArrowUpRight } from "lucide-react";
 
-export function SiteHeader({ active = "terminal" }: { active?: "home" | "terminal" | "robinhood" | "demo" | "compare" }) {
+export function SiteHeader({ active = "terminal", market }: { active?: "home" | "terminal" | "robinhood" | "demo" | "compare" | "account"; market?: "robinhood" | "xstocks" }) {
+  const terminalHref = market ? `/terminal?market=${market}` : "/terminal";
   return (
     <><header className="site-header">
       <div className="site-header-inner page-shell">
@@ -10,19 +11,15 @@ export function SiteHeader({ active = "terminal" }: { active?: "home" | "termina
         </Link>
         <nav className="primary-nav" aria-label="Primary navigation">
           <Link className={`nav-link${active === "home" ? " nav-link-active" : ""}`} href="/" aria-current={active === "home" ? "page" : undefined}>Overview</Link>
-          <Link className={`nav-link${active === "terminal" ? " nav-link-active" : ""}`} href="/terminal" aria-current={active === "terminal" ? "page" : undefined}>
+          <Link className={`nav-link${active === "terminal" ? " nav-link-active" : ""}`} href={terminalHref} aria-current={active === "terminal" ? "page" : undefined}>
             Terminal
           </Link>
           <Link className={`nav-link${active === "robinhood" ? " nav-link-active" : ""}`} href="/robinhood" aria-current={active === "robinhood" ? "page" : undefined}>
-            Robinhood Chain
+            Swap
           </Link>
-          <Link className={`nav-link${active === "demo" ? " nav-link-active" : ""}`} href="/demo" aria-current={active === "demo" ? "page" : undefined}>
-            Demo
-          </Link>
-          <Link className={`nav-link${active === "compare" ? " nav-link-active" : ""}`} href="/compare" aria-current={active === "compare" ? "page" : undefined}>Compare</Link>
-          <Link className="nav-link" href="/account">Account</Link>
+          <Link className={`nav-link${active === "account" ? " nav-link-active" : ""}`} href="/account" aria-current={active === "account" ? "page" : undefined}>Account</Link>
         </nav>
-        <Link className="header-link" href="/terminal">
+        <Link className="header-link" href={terminalHref}>
           Open terminal <ArrowUpRight size={15} aria-hidden="true" />
         </Link>
       </div>

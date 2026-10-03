@@ -62,7 +62,6 @@ for (const width of [1440, 390]) test(`AI draft review, exact handoff, wallet se
   expect(calls).not.toContain("Phantom:eth_requestAccounts");
   expect(calls?.some((call) => call.includes("eth_sendTransaction"))).toBe(false);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
-  await page.screenshot({ path: `artifacts/agent-draft-${width}.png`, fullPage: true });
 });
 
 test("AI provider failure stays unavailable and cannot save a fake draft", async ({ page }) => {

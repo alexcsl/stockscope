@@ -1,4 +1,4 @@
-import { runMonitor } from "../src/lib/monitor";
+import { runMonitor } from "./monitor";
 
 if (process.env.STOCKSCOPE_LOCAL_OPERATOR !== "1") {
   process.stderr.write("Set STOCKSCOPE_LOCAL_OPERATOR=1 to run the local monitor.\n");

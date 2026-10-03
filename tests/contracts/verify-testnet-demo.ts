@@ -3,12 +3,12 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { network } from "hardhat";
 import { createPublicClient, createWalletClient, custom, erc20Abi, http, keccak256, pad, type Abi, type Address, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { compileContracts } from "./compile-contracts.mjs";
-import { prepareTestnetTrade, type TestnetManifest } from "../src/lib/testnet-execution";
-import { reconcileLogs } from "../src/lib/receipt-verification";
-import { sourcedAsset, contract } from "../tests/source-fixtures";
-import type { PolicyEvidence } from "../src/lib/policy";
-import { readDemoStatus } from "../src/lib/demo-status";
+import { compileContracts } from "../../contracts/compile-contracts.mjs";
+import { prepareTestnetTrade, type TestnetManifest } from "../../src/lib/testnet-execution";
+import { reconcileLogs } from "../../src/lib/receipt-verification";
+import { sourcedAsset, contract } from "../source-fixtures";
+import type { PolicyEvidence } from "../../src/lib/policy";
+import { readDemoStatus } from "../../src/lib/demo-status";
 
 const url = process.env.ARBITRUM_SEPOLIA_RPC_URL || "https://sepolia-rollup.arbitrum.io/rpc";
 const source = createPublicClient({ transport: http(url, { timeout: 15000, retryCount: 0 }) });
@@ -78,7 +78,7 @@ try {
   assert.ok((await prepare("buy", "5000000")).approval);
   assert.equal((await readDemoStatus(manifest, transport)).state, "ready");
   const evidenceRecord = { kind: "Local fork of Arbitrum Sepolia, not public deployment", sourceBlock: blockNumber.toString(), ownerOnlyActivation: true, ownerOnlyRefresh: true, unfundedWallet: "blocked without approval", replay: "rejected", staleFeeds: "blocked and restored by owner refresh", results, deploymentGas: deployment.gasUsed.toString() };
-  await mkdir("artifacts", { recursive: true });
-  await writeFile("artifacts/testnet-demo-fork.json", JSON.stringify(evidenceRecord, null, 2));
+  await mkdir("test-results", { recursive: true });
+  await writeFile("test-results/testnet-demo-fork.json", JSON.stringify(evidenceRecord, null, 2));
   console.log(JSON.stringify(evidenceRecord));
 } finally { await connection.close(); }

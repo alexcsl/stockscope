@@ -16,11 +16,6 @@ export function compileContracts(includeTests = false) {
 }
 
 if (process.argv[1]?.endsWith("compile-contracts.mjs")) {
-  const contracts = compileContracts();
-  fs.mkdirSync("artifacts", { recursive: true });
-  for (const [file, entries] of Object.entries(contracts)) {
-    if (!file.startsWith("contracts/")) continue;
-    for (const [name, contract] of Object.entries(entries)) fs.writeFileSync(`artifacts/${name}.json`, JSON.stringify(contract, null, 2));
-  }
+  compileContracts();
   console.log(`Compiled StockScope contracts with solc ${solc.version()}`);
 }

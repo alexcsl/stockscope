@@ -8,9 +8,6 @@ cache
 test-results
 playwright-report
 docs
-scripts/provision-*.ts
-scripts/seed-*.ts
-scripts/configure-*.mjs
 tests
 supabase
 *.key

@@ -38,22 +38,21 @@ for (const width of [1440, 390, 320]) test(`Robinhood prices, charts and activit
   await expect.poll(() => chartCalls).toBeGreaterThan(2);
   await venue.getByRole("button", { name: "Refresh activity" }).click();
   await expect.poll(() => activityCalls).toBeGreaterThan(1);
-  await page.screenshot({ path: `artifacts/market-expansion-${width}.png`, fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
 });
 
 test("xStocks activity requests retain the issuer and stale observations are marked", async ({ page }) => {
-  let calls = 0;
+  let failRefresh = false;
   await page.route("**/api/market/history?**", (route) => route.fulfill({ json: { state: "unavailable", reason: "No indexed trades", candles: [], retrievedAt: new Date().toISOString() } }));
   await page.route("**/api/market/venues?**", (route) => {
     const params = new URL(route.request().url()).searchParams;
     expect(params.get("issuer")).toBe("xstocks");
     expect(params.get("symbol")).toBe("AAPLx");
-    calls++;
-    return calls === 1 ? route.fulfill({ json: { state: "unavailable", reason: "pool_verification_unavailable", pairs: [], checkedAt: new Date().toISOString() } }) : route.fulfill({ status: 503 });
+    return !failRefresh ? route.fulfill({ json: { state: "unavailable", reason: "pool_verification_unavailable", pairs: [], checkedAt: new Date().toISOString() } }) : route.fulfill({ status: 503 });
   });
   await page.goto("/xstocks/AAPLx");
   await expect(page.locator(".venue-market")).toContainText("pool verification unavailable");
+  failRefresh = true;
   await page.getByRole("button", { name: "Refresh activity" }).click();
   await expect(page.locator(".venue-market")).toContainText("Activity refresh failed");
   await expect(page.getByText("Price unavailable", { exact: true })).toBeVisible();

@@ -133,3 +133,22 @@ button:disabled { opacity: .55; cursor: not-allowed; }
 @media (max-width: 600px) { .policy-checks li { flex-wrap: wrap; } .policy-checks li > div { flex-basis: 100%; } }
 
 .info-close { display: block; margin-top: 12px; min-height: 44px; padding: 8px 14px; border: 1px solid #587164; border-radius: 4px; background: #23372a; color: #e3efe5; font-size: 14px; }
+
+.market-picker { display: flex; align-items: end; flex-wrap: wrap; gap: 16px; padding: 20px; border-bottom: 1px solid #293c30; }
+.market-picker label { display: grid; gap: 8px; font-size: 12px; color: #bdcec3; min-width: 0; }
+.market-picker select { min-height: 44px; max-width: 100%; padding: 10px 14px; background: #13251a; color: #edf4ee; border: 1px solid #405845; border-radius: 5px; font-size: 14px; }
+.market-picker .cell-meta { flex: 1; min-width: 180px; margin: 0; }
+.market-badge { display: inline-block; padding: 6px 10px; margin-top: 8px; border: 1px solid #4b624d; border-radius: 4px; font-size: 11px; line-height: 1.5; }
+.market-robinhood { background: #21361a; color: #c5ef9a; }
+.market-xstocks { background: #172b3b; color: #a6d8f4; border-color: #385f75; }
+.market-avatar { flex-shrink: 0; width: 36px; height: 36px; display: grid; place-items: center; border-radius: 8px; }
+.terminal-comparison { margin: 48px 0; scroll-margin-top: 100px; }
+.terminal-comparison .comparison-tray { position: static; }
+.sourced-table td:last-child .external-link { display: block; margin-top: 12px; }
+.detail-heading .desk-links { flex-wrap: wrap; }
+@media (max-width: 600px) {
+  .market-picker { padding: 16px; }
+  .market-picker label, .market-picker select { width: 100%; }
+  .detail-heading { align-items: flex-start; flex-direction: column; gap: 20px; }
+  .detail-heading .desk-links { width: 100%; }
+}

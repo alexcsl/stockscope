@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { PageLoading } from "@/components/page-loading";
 import { connection } from "next/server";
 import { notFound } from "next/navigation";
-import Link from "next/link";
+import { InstrumentHeading, InstrumentSections } from "@/components/instrument-heading";
 import { SiteHeader } from "@/components/site-header";
 import { SourceLabel } from "@/components/source-label";
 import { TradeWorkspace } from "@/components/trade-workspace";
@@ -24,8 +24,8 @@ async function MarketAssetData({ params }: { params: Promise<{ symbol: string }>
   const identity = sourceValue(asset.identity);
   const price = sourceValue(asset.price);
   const chain = sourceValue(asset.chain);
-  return <><main className="page-shell detail-main"><Link className="back-link" href="/terminal">Back to sourced market</Link><div className="desk-heading"><div><span className="section-kicker">ROBINHOOD CHAIN / STOCK TOKEN</span><h1>{symbol}</h1><p>{identity?.name || "Issuer identity unavailable"}</p></div><span className="card-tag">SOURCED RECORD</span></div><div className="data-notice"><strong>Independent source states</strong><span>Issuer references are not venue prices. Quote availability is not execution approval. Collateral support remains unverified.</span></div>
-    <nav className="asset-section-nav" aria-label="Asset sections">{[["overview", "Overview"], ["markets", "Markets"], ["issuer", "Issuer"], ["events", "Events"], ["research-agent", "Research"], ["action", "Action"]].map(([id, label]) => <a key={id} href={`#${id}`}>{label}</a>)}</nav>
+  return <><main className="page-shell detail-main"><InstrumentHeading symbol={symbol} name={identity?.name || "Issuer identity unavailable"} issuer="robinhood" contract={identity?.contract} /><div className="data-notice"><strong>Independent source states</strong><span>Issuer references are not venue prices. Quote availability is not execution approval. Collateral support remains unverified.</span></div>
+    <InstrumentSections />
     <div className="detail-grid"><div className="detail-primary">
       <section className="asset-section" id="overview" aria-labelledby="overview-title"><h2 className="asset-section-title" id="overview-title">Overview</h2><section className="detail-card"><div className="card-header"><h3>Issuer reference</h3><span className="card-tag">{asset.price.state.toUpperCase()}</span></div>{price ? <><dl className="evidence-facts"><div><dt>Underlying share bid / ask</dt><dd>${displayDecimal(price.bid, 4)} / ${displayDecimal(price.ask, 4)}</dd></div><div><dt>Token-equivalent reference bid / ask</dt><dd>${displayDecimal(price.tokenBid, 6)} / ${displayDecimal(price.tokenAsk, 6)}</dd></div><div><dt>Conversion</dt><dd>Underlying price × issuer multiplier; applied once</dd></div><div><dt>Issuer-reported halt</dt><dd>{price.halted ? "Halted" : "No halt reported"}</dd></div></dl><p className="cell-meta">Token-equivalent references are derived issuer values, not venue quotes. Session comparability is unverified; deviation is unavailable.</p></> : <p className="workflow-message">Price unavailable. No fixture fallback is used.</p>}<SourceLabel source={asset.price.source} /></section><EvidenceGuide asset={asset} /></section>
       <section className="asset-section" id="markets" aria-labelledby="markets-title"><h2 className="asset-section-title" id="markets-title">Markets</h2><TokenCandles symbol={symbol} issuer="robinhood" /><VenueMarket symbol={symbol} /><QuoteComparison symbol={symbol} /></section>
@@ -36,5 +36,5 @@ async function MarketAssetData({ params }: { params: Promise<{ symbol: string }>
 }
 
 export default function MarketAssetPage({ params }: { params: Promise<{ symbol: string }> }) {
-  return <><SiteHeader /><Suspense fallback={<main className="page-shell"><PageLoading title="Asset research" /></main>}><MarketAssetData params={params} /></Suspense></>;
+  return <><SiteHeader market="robinhood" /><Suspense fallback={<main className="page-shell"><PageLoading title="Asset research" /></main>}><MarketAssetData params={params} /></Suspense></>;
 }

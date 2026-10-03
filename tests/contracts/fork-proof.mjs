@@ -14,7 +14,7 @@ try {
   const multiplier = await client.readContract({ address: asset, abi: parseAbi(["function uiMultiplier() view returns (uint256)"]), functionName: "uiMultiplier" });
   if (!code || code === "0x" || multiplier <= 0n) throw new Error("Fork identity verification failed");
   const proof = { checkedAt: new Date().toISOString(), sourceChainId: await rpc.getChainId(), block: blockNumber.toString(), asset, multiplier: multiplier.toString(), kind: "Read-only mainnet state on a local fork after one synthetic Shanghai block; not Nitro execution parity", tradeExecuted: false };
-  fs.mkdirSync("artifacts", { recursive: true });
-  fs.writeFileSync("artifacts/fork-proof.json", JSON.stringify(proof, null, 2));
+  fs.mkdirSync("test-results", { recursive: true });
+  fs.writeFileSync("test-results/fork-proof.json", JSON.stringify(proof, null, 2));
   console.log(JSON.stringify(proof));
 } finally { await connection.close(); }

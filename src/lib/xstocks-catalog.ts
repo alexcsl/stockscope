@@ -49,17 +49,20 @@ export async function listXStocks(page: number, fetcher: typeof fetch = fetch): 
 export async function getXStock(symbol: string, fetcher: typeof fetch = fetch): Promise<XStockRecord | null> {
   if (!/^[A-Za-z0-9]{1,15}x$/.test(symbol)) return null;
   try {
-    const [assetResponse, multiplierResponse] = await Promise.all([
+    const [assetResult, multiplierResult] = await Promise.allSettled([
       fetcher(`${api}/${encodeURIComponent(symbol)}`, { cache: "no-store", signal: AbortSignal.timeout(7000) }),
       fetcher(`${api}/${encodeURIComponent(symbol)}/multiplier?network=Arbitrum`, { cache: "no-store", signal: AbortSignal.timeout(7000) }),
     ]);
-    if (!assetResponse.ok || !multiplierResponse.ok) throw new Error("issuer_unavailable");
+    if (assetResult.status !== "fulfilled" || !assetResult.value.ok) throw new Error("issuer_unavailable");
+    const assetResponse = assetResult.value;
+    const multiplierResponse = multiplierResult.status === "fulfilled" ? multiplierResult.value : null;
     const listing = parseXStock(await assetResponse.json());
     if (!listing || listing.symbol !== symbol) return null;
-    const multiplier = record(await multiplierResponse.json())?.currentMultiplier;
+    const multiplier = multiplierResponse?.ok ? record(await multiplierResponse.json().catch(() => null))?.currentMultiplier : null;
     const value = typeof multiplier === "number" && Number.isFinite(multiplier) && multiplier > 0 ? String(multiplier) : null;
     const result: XStockRecord = { ...listing, state: "unavailable", reason: "chain_verification_unavailable", multiplier: value, venue: null };
     if (!value) return { ...result, reason: "multiplier_unavailable" };
+    try {
     const client = createPublicClient({ transport: http(rpc, { timeout: 7000, retryCount: 0 }) });
     if (await client.getChainId() !== 42161) return result;
     const blockNumber = await client.getBlockNumber();
@@ -71,5 +74,6 @@ export async function getXStock(symbol: string, fetcher: typeof fetch = fetch): 
     ]);
     if (!code || code === "0x" || decimals !== 18 || onchainMultiplier !== parseUnits(value, 18)) return { ...result, reason: "identity_or_multiplier_mismatch" };
     return { ...result, state: "verified", reason: undefined, venue: await getVenuePairs(42161, contract, usdc, fetcher) };
+    } catch { return result; }
   } catch { return null; }
 }

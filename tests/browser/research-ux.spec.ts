@@ -21,7 +21,6 @@ for (const width of [1440, 390, 320]) test(`search, pagination and comparison re
   await expect(page.locator(".comparison-card")).toContainText("source observation times are unknown");
   await page.reload();
   await expect(page.locator(".comparison-tray")).toContainText("STOCK43x");
-  await page.screenshot({ path: `artifacts/research-comparison-${width}.png`, fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
 });
 
@@ -46,7 +45,6 @@ for (const width of [1440, 390, 320]) test(`candles, attribution, gaps and acces
   await expect(page.getByText("Missing intervals: 1. No forward filling.")).toBeVisible();
   await expect(page.getByRole("table", { name: "Latest 20 indexed candles, UTC" })).toBeVisible();
   await expect(page.getByRole("link", { name: "TradingView Lightweight Charts" })).toBeVisible();
-  await page.screenshot({ path: `artifacts/candles-${width}.png`, fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
 });
 
@@ -68,35 +66,15 @@ test("catalog source delay does not block the comparison shell", async ({ page }
   await page.locator(".catalog-item").click();
   await expect(page.locator(".comparison-tray")).toContainText("AAPL");
   release();
-  await expect(page.getByText("Partial discovery")).toBeVisible();
+  await expect(page.locator("#compare").getByText("Partial discovery")).toBeVisible();
 });
 
-test("warmed navigation shows the comparison shell within 250 ms", async ({ page }) => {
+test("comparison stays inside the terminal and preserves its desk state", async ({ page }) => {
   await page.route("**/api/market/catalog", (route) => route.fulfill({ json: { complete: true, assets: [], reason: null, retrievedAt: new Date().toISOString() } }));
-  await page.goto("/demo");
-  await page.getByRole("navigation", { name: "Primary navigation" }).getByRole("link", { name: "Compare", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Compare stock tokens" })).toBeVisible();
-  const measurements: number[] = [];
-  for (let run = 0; run < 3; run++) {
-    await page.getByRole("navigation", { name: "Primary navigation" }).getByRole("link", { name: "Demo", exact: true }).click();
-    await expect(page.locator("#hero-title")).toBeVisible();
-    await page.evaluate(() => {
-      const timing = window as Window & { navigationElapsed?: number };
-      timing.navigationElapsed = undefined;
-      document.querySelector('.primary-nav a[href="/compare"]')!.addEventListener("click", () => {
-        const start = performance.now();
-        const observer = new MutationObserver(() => {
-          if (document.querySelector("main h1")?.textContent === "Compare stock tokens") { timing.navigationElapsed = performance.now() - start; observer.disconnect(); }
-        });
-        observer.observe(document.body, { childList: true, subtree: true });
-      }, { once: true });
-    });
-    await page.getByRole("navigation", { name: "Primary navigation" }).getByRole("link", { name: "Compare", exact: true }).click();
-    await expect(page.getByRole("heading", { name: "Compare stock tokens" })).toBeVisible();
-    const elapsed = await page.evaluate(() => (window as Window & { navigationElapsed?: number }).navigationElapsed);
-    expect(elapsed).toBeDefined();
-    measurements.push(elapsed!);
-    expect(elapsed!).toBeLessThanOrEqual(250);
-  }
-  console.log(`Warmed comparison shell (ms): ${measurements.map((value) => value.toFixed(1)).join(", ")}`);
+  await page.goto("/terminal?market=robinhood&q=AAPL");
+  await page.getByRole("link", { name: "Compare issuers", exact: true }).click();
+  await expect(page).toHaveURL(/\/terminal\?market=robinhood&q=AAPL#compare$/);
+  await expect(page.getByRole("heading", { name: "Compare stock tokens" })).toBeInViewport();
+  await expect(page.getByRole("textbox", { name: "Search Stock Tokens" })).toHaveValue("AAPL");
+  await expect(page.getByRole("link", { name: "Terminal", exact: true })).toHaveAttribute("aria-current", "page");
 });

@@ -8,7 +8,6 @@ for (const width of [1440, 390, 320]) test(`editorial landing remains usable at 
   await expect(page.getByText("Illustrative product film. It contains no market prices, live quotes, or trade approval.")).toBeVisible();
   await expect(page.locator(".landing-film video source")).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
-  await page.screenshot({ path: `artifacts/landing-${width}.png`, fullPage: true });
   await page.locator(".landing-hero-copy").getByRole("link", { name: /Open terminal/ }).focus();
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/\/terminal$/, { timeout: 20000 });
@@ -69,7 +68,6 @@ for (const width of [390, 320]) test(`comparison stays usable at ${width}px`, as
   await expect(page.getByRole("heading", { name: "Compare evidence" })).toBeVisible();
   await expect(page.getByText("Displayed pool liquidity does not estimate trade execution.").first()).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
-  await page.screenshot({ path: `artifacts/compare-${width}.png`, fullPage: true });
 });
 
 test("data-saving preference keeps the film poster", async ({ page }) => {
@@ -102,13 +100,16 @@ test("first-party film plays when scrolled into view", async ({ page }) => {
 
 test("landing preview links to the matching sourced asset", async ({ page }) => {
   await page.goto("/");
+  await page.locator(".landing-preview").scrollIntoViewIfNeeded();
+  await expect(page.locator(".landing-preview-panel")).toHaveCSS("opacity", "1");
+  await expect(page.locator(".landing-preview-row").first()).toHaveCSS("opacity", "1");
   await page.getByRole("link", { name: "Inspect record →" }).first().click();
   await expect(page).toHaveURL(/\/market\/aapl$/);
   await expect(page.getByRole("heading", { name: "AAPL", exact: true })).toBeVisible();
 });
 
-test("sourced terminal search, sorting, filters, links and demo separation", async ({ page }) => {
-  await page.goto("/terminal");
+test("sourced terminal search, sorting, filters and unified navigation", async ({ page }) => {
+  await page.goto("/terminal?market=robinhood");
   await expect(page.getByRole("heading", { name: "Stock Tokens", exact: true })).toBeVisible();
   await expect(page.locator(".sourced-row")).toHaveCount(3);
   await page.getByRole("textbox", { name: "Search Stock Tokens" }).fill("NVDA");
@@ -125,7 +126,7 @@ test("sourced terminal search, sorting, filters, links and demo separation", asy
   await page.getByRole("button", { name: "Clear search and filters" }).click();
   await page.getByRole("button", { name: "Market", exact: true }).click();
   await expect(page.locator(".sourced-table thead")).toContainText("Issuer reference");
-  await expect(page.locator(".sourced-table thead")).toContainText("Verified venue");
+  await expect(page.locator(".sourced-table thead")).toContainText("Venue research");
   await page.getByRole("combobox", { name: "Sort" }).selectOption("reference");
   await page.getByRole("button", { name: "Action", exact: true }).click();
   await expect(page.locator(".sourced-table thead")).toContainText("Action check");
@@ -145,28 +146,28 @@ test("sourced terminal search, sorting, filters, links and demo separation", asy
   await sectionNav.getByRole("link", { name: "Markets", exact: true }).click();
   await expect(page).toHaveURL(/#markets$/);
   await expect(page.locator("#markets")).toBeInViewport();
-  await page.getByRole("link", { name: "Demo", exact: true }).click();
-  await expect(page.locator(".demo-banner")).toBeVisible();
+  await page.getByRole("link", { name: "Terminal", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Stock Tokens", exact: true })).toBeVisible();
 });
 
-for (const width of [390, 320]) test(`demo table scroll stays inside the panel at ${width}px`, async ({ page }) => {
+for (const width of [390, 320]) test(`legacy demo opens unified xStocks at ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: 1000 });
   await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.route("**/api/market/catalog", (route) => route.fulfill({ json: { complete: true, reason: null, retrievedAt: new Date().toISOString(), assets: [{ symbol: "AAPLx", name: "Apple xStock", contract: `0x${"4".repeat(40)}`, underlying: "AAPL", isin: null }] } }));
   await page.goto("/demo");
-  await expect(page.locator(".demo-banner")).toBeVisible();
+  await expect(page).toHaveURL(/\/terminal\?market=xstocks$/);
+  await expect(page.locator(".sourced-row")).toHaveCount(1);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
-  const table = page.locator(".table-wrap");
+  const table = page.locator(".market-panel .table-wrap");
   await table.scrollIntoViewIfNeeded();
-  await table.evaluate((element) => { element.scrollLeft = element.scrollWidth; });
-  await expect(page.getByRole("link", { name: "View AAPLx details" })).toBeInViewport();
-  await page.getByRole("link", { name: "View AAPLx details" }).click();
-  await expect(page).toHaveURL(/\/assets\/aaplx$/);
+  await page.locator(".sourced-row .asset-link").click();
+  await expect(page).toHaveURL(/\/xstocks\/AAPLx$/);
 });
 
 for (const width of [1440, 390, 320]) test(`layout and keyboard controls at ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: 1000 });
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/terminal");
+  await page.goto("/terminal?market=robinhood");
   const search = page.getByRole("textbox", { name: "Search Stock Tokens" });
   await search.focus();
   await page.keyboard.type("TSLA");
@@ -174,11 +175,9 @@ for (const width of [1440, 390, 320]) test(`layout and keyboard controls at ${wi
   await page.keyboard.press("Tab");
   await expect(page.getByRole("button", { name: "All", exact: true })).toBeFocused();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
-  await page.screenshot({ path: `artifacts/terminal-${width}.png`, fullPage: true });
   await page.goto("/market/aapl");
   await expect(page.getByRole("button", { name: "Connect wallet" })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
-  await page.screenshot({ path: `artifacts/asset-${width}.png`, fullPage: true });
 });
 
 test("wallet rejection and unavailable analyst are explicit", async ({ page }) => {

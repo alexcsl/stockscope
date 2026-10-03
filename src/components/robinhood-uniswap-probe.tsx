@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowUpRight } from "lucide-react";
 import type { UniswapRoute } from "@/lib/uniswap-route";
+import { discoverWallets, requestAccounts, type WalletOption, type BrowserWallet } from "@/lib/evm-wallet";
 
 const messages: Record<Exclude<UniswapRoute["state"], "available">, string> = {
-  not_configured: "Add UNISWAP_API_KEY to .env.local and restart the dev server.",
+  not_configured: "Uniswap quotes are unavailable for this market. The route provider is not configured.",
   wallet_required: "Enter a valid public Robinhood Chain wallet address to request a quote.",
   identity_unavailable: "The issuer token or onchain decimals could not be verified.",
   no_route: "Uniswap returned no route for this pair and size.",
@@ -27,15 +28,45 @@ function units(value: string, decimals: number, fractionDigits: number) {
   return `${whole.toLocaleString("en-US")}${fraction ? `.${fraction}` : ""}`;
 }
 
-export function RobinhoodUniswapProbe() {
-  const [symbol, setSymbol] = useState("AAPL");
+export function RobinhoodUniswapProbe({ initialSymbol = "AAPL" }: { initialSymbol?: string }) {
+  const [symbol, setSymbol] = useState(["AAPL", "NVDA", "TSLA"].includes(initialSymbol) ? initialSymbol : "AAPL");
   const [sizeUsd, setSizeUsd] = useState(1000);
   const [swapper, setSwapper] = useState("");
+  const [wallets, setWallets] = useState<WalletOption[]>([]);
+  const [walletId, setWalletId] = useState("");
+  const [connected, setConnected] = useState(false);
+  const [walletMessage, setWalletMessage] = useState("");
+  const [connecting, setConnecting] = useState(false);
+  const provider = useRef<BrowserWallet | null>(null);
   const [result, setResult] = useState<UniswapRoute | null>(null);
   const [pending, setPending] = useState(false);
   const [clock, setClock] = useState(0);
   const controller = useRef<AbortController | null>(null);
   useEffect(() => { const timer = window.setInterval(() => setClock(Date.now()), 1000); return () => { clearInterval(timer); controller.current?.abort(); }; }, []);
+  useEffect(() => {
+    let active = true;
+    void discoverWallets().then((options) => { if (active) { setWallets(options); setWalletId(options[0]?.id || ""); if (!options.length) setWalletMessage("No EVM wallet found. Enter a public address to research a quote."); } });
+    return () => { active = false; };
+  }, []);
+  useEffect(() => {
+    const wallet = provider.current;
+    const reset = () => { controller.current?.abort(); setPending(false); setSwapper(""); setResult(null); setConnected(false); setWalletMessage("Wallet changed. Connect again for a fresh quote."); };
+    wallet?.on?.("accountsChanged", reset); wallet?.on?.("chainChanged", reset);
+    return () => { wallet?.removeListener?.("accountsChanged", reset); wallet?.removeListener?.("chainChanged", reset); };
+  }, [connected]);
+  async function connectWallet() {
+    controller.current?.abort(); setPending(false); setResult(null); setConnecting(true);
+    try {
+      const wallet = wallets.find((item) => item.id === walletId)?.provider;
+      if (!wallet) { setWalletMessage("No EVM wallet found. Install a compatible browser wallet or enter a public address."); return; }
+      const accounts = await requestAccounts(wallet);
+      if (!accounts[0]) throw new Error("empty_wallet");
+      provider.current = wallet;
+      setSwapper(accounts[0]); setConnected(true);
+      setWalletMessage("Wallet connected for Robinhood Chain quote context. No approval or signature requested.");
+    } catch (error) { setWalletMessage((error as { code?: number })?.code === 4001 ? "Wallet connection was rejected." : "Wallet connection failed. Check pending wallet requests before retrying."); }
+    finally { setConnecting(false); }
+  }
 
   async function checkRoute() {
     controller.current?.abort();
@@ -68,6 +99,8 @@ export function RobinhoodUniswapProbe() {
         <span className="card-tag">READ ONLY</span>
       </div>
       <p className="issuer-intro">Request an indicative USDG to Stock Token quote from Uniswap&apos;s Trading API. The API key stays on the server. This check never creates or submits a transaction.</p>
+      <div className="route-controls"><label htmlFor="quote-wallet">Wallet</label><select id="quote-wallet" value={walletId} disabled={connecting || connected} onChange={(event) => setWalletId(event.target.value)}>{wallets.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select><button type="button" disabled={connecting || !wallets.length} onClick={connectWallet}>{connecting ? "Connecting wallet" : connected ? "Reconnect wallet" : "Connect wallet"}</button></div>
+      {walletMessage ? <p className="workflow-message" role="status">{walletMessage}</p> : null}
       <div className="route-controls">
         <label htmlFor="uniswap-token">Stock Token</label>
         <select id="uniswap-token" value={symbol} onChange={(event) => { controller.current?.abort(); setPending(false); setSymbol(event.target.value); setResult(null); }}>
@@ -82,7 +115,7 @@ export function RobinhoodUniswapProbe() {
           <option value={10000}>10,000 USDG</option>
         </select>
         <label className="wallet-input-label" htmlFor="uniswap-swapper">Public wallet address</label>
-        <input id="uniswap-swapper" className="wallet-address-input" value={swapper} onChange={(event) => { setSwapper(event.target.value.trim()); setResult(null); }} autoComplete="off" spellCheck={false} placeholder="0x..." />
+        <input id="uniswap-swapper" className="wallet-address-input" value={swapper} onChange={(event) => { controller.current?.abort(); setPending(false); setConnected(false); setSwapper(event.target.value.trim()); setResult(null); }} autoComplete="off" spellCheck={false} placeholder="0x..." />
         <button type="button" onClick={checkRoute} disabled={pending}>{pending ? "Checking route" : "Check route"}</button>
       </div>
       <p className="route-disclosure">The address is sent to Uniswap as the quote wallet. It is public account data. No signature or token approval is requested.</p>

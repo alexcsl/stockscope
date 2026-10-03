@@ -54,6 +54,6 @@ const gas = await client.estimateGas({ account: owner, to: controller, data, val
 const price = await client.getGasPrice();
 const balance = await client.getBalance({ address: owner });
 if (balance < gas * price * 2n) throw new Error("Deployment wallet needs more Arbitrum Sepolia test ETH");
-fs.mkdirSync("artifacts", { recursive: true });
-fs.writeFileSync("artifacts/deployment-requests.json", JSON.stringify([{ label, chainId: "0x66eee", from: owner, ...(controller ? { to: controller } : {}), data, value: "0x0" }], null, 2));
+fs.mkdirSync(".stockscope", { recursive: true });
+fs.writeFileSync(".stockscope/deployment-requests.json", JSON.stringify([{ label, chainId: "0x66eee", from: owner, ...(controller ? { to: controller } : {}), data, value: "0x0" }], null, 2));
 console.log(JSON.stringify({ unsigned: true, chainId, owner, policySigner: signer.address, gas: gas.toString(), estimatedFeeEth: formatEther(gas * price), balanceEth: formatEther(balance), label }));

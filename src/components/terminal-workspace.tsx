@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { SourcedAsset } from "@/lib/robinhood-data";
 import type { CatalogSnapshot } from "@/lib/xstocks-catalog";
+import { parseCatalogSnapshot } from "@/lib/catalog-snapshot";
 import { SourcedTerminal } from "./sourced-terminal";
 import { ResearchTools } from "./research-tools";
 import { ComparisonDesk } from "./comparison-desk";
@@ -16,7 +17,7 @@ export function TerminalWorkspace({ assets, initialQuery }: { assets: SourcedAss
     const controller = new AbortController();
     fetch("/api/market/catalog", { signal: controller.signal }).then(async (response) => {
       if (!response.ok) throw new Error("catalog_unavailable");
-      const result = await response.json() as CatalogSnapshot;
+      const result = parseCatalogSnapshot(await response.json());
       if (!controller.signal.aborted) { setCatalog(result); setError(""); }
     }).catch(() => { if (!controller.signal.aborted) setError("xStocks catalog unavailable. Robinhood records remain accessible."); });
     return () => controller.abort();
